@@ -1,0 +1,52 @@
+name: openverse_v0
+description: "OpenVerse - Cross-platform AI Workspace"
+publish_to: "none"
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+
+  # Routing
+  go_router: ^16.0.0
+
+  # Networking
+  dio: ^5.9.0
+
+  # Local Preferences
+  shared_preferences: ^2.5.3
+
+  # Secure Storage
+  flutter_secure_storage: ^9.2.4
+
+  # Markdown
+  flutter_markdown_plus: ^1.0.3
+
+  # Syntax Highlighting
+  flutter_highlight: ^0.7.0
+
+  # Fonts
+  google_fonts: ^6.3.1
+
+  # Utilities
+  uuid: ^4.5.1
+  intl: ^0.20.2
+  logger: ^2.6.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
