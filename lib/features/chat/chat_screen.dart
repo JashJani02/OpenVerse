@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/message.dart';
 import 'chat_controller.dart';
+import 'widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -31,45 +32,32 @@ class _ChatScreenState extends State<ChatScreen> {
       animation: controller,
       builder: (context, _) {
         return Scaffold(
-          appBar: AppBar(title: const Text("OpenVerse")),
           body: Column(
             children: [
               Expanded(
-                child: controller.messages.isEmpty
-                    ? const Center(child: Text("Start a conversation"))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: controller.messages.length,
-                        itemBuilder: (context, index) {
-                          final ChatMessage message =
-                              controller.messages[index];
+                child: Container(
+                  color: const Color(0xFF121212),
+                  child: controller.messages.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "Start a conversation",
+                            style: TextStyle(color: Colors.blue),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 20,
+                          ),
+                          itemCount: controller.messages.length,
+                          itemBuilder: (context, index) {
+                            final ChatMessage message =
+                                controller.messages[index];
 
-                          final isUser = message.isUser;
-
-                          return Align(
-                            alignment: isUser
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.all(12),
-                              constraints: const BoxConstraints(maxWidth: 600),
-                              decoration: BoxDecoration(
-                                color: isUser
-                                    ? Colors.blue
-                                    : Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Text(
-                                message.content,
-                                style: TextStyle(
-                                  color: isUser ? Colors.white : Colors.black,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                            return MessageBubble(message: message);
+                          },
+                        ),
+                ),
               ),
 
               if (controller.isSending)
