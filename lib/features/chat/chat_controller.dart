@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/storage/secure_storage.dart';
 import '../../models/message.dart';
-import '../../services/ai/openrouter_provider.dart';
+import '../../models/provider_config.dart';
+import '../../models/provider_type.dart';
+import '../../services/ai/provider_factory.dart';
 
 class ChatController extends ChangeNotifier {
-  final OpenRouterProvider _provider = OpenRouterProvider();
-
   final TextEditingController messageController =
       TextEditingController();
 
@@ -23,16 +23,28 @@ class ChatController extends ChangeNotifier {
 
     if (text.isEmpty) return;
 
-    final apiKey =
-        await SecureStorageService.getApiKey();
+    final providerName =
+        await SecureStorageService.getProvider();
 
     final model =
-        await SecureStorageService.getSelectedModel();
+        await SecureStorageService.getSelectedModel(providerName);
 
-    if (apiKey == null || model == null) {
-      debugPrint("API Key or model missing.");
-      return;
-    }
+    if (model == null) return;
+
+    final providerType = await SecureStorageService.getProvider();
+
+    final apiKey =
+        providerType == ProviderType.openRouter
+            ? await SecureStorageService.getApiKey()
+            : null;
+
+    final config = ProviderConfig(
+      providerType: providerType,
+      apiKey: apiKey,
+    );
+
+    final provider =
+        ProviderFactory.create(config);
 
     final userMessage = ChatMessage(
       id: DateTime.now()
@@ -48,21 +60,24 @@ class ChatController extends ChangeNotifier {
     messageController.clear();
 
     _isSending = true;
+
     notifyListeners();
 
     try {
-      final assistant = await _provider.sendMessage(
-        apiKey: apiKey,
+      final reply =
+          await provider.sendMessage(
+        config: config,
         model: model,
         messages: _messages,
       );
 
-      _messages.add(assistant);
+      _messages.add(reply);
     } catch (e) {
       debugPrint(e.toString());
     }
 
     _isSending = false;
+
     notifyListeners();
   }
 

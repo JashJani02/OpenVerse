@@ -1,145 +1,69 @@
 import 'package:dio/dio.dart';
 
-
-
-import '../../core/constants/api_constants.dart';
-
 import '../../core/network/dio_client.dart';
-
 import '../../models/ai_model.dart';
-
 import '../../models/message.dart';
-
 import '../../models/provider_config.dart';
-
 import 'ai_provider.dart';
 
-
-
-class OpenRouterProvider implements AIProvider {
-
+class OllamaProvider implements AIProvider {
   final Dio _dio = DioClient.instance;
 
-
+  static const defaultBaseUrl =
+      'http://localhost:11434';
 
   @override
-
   Future<List<AIModel>> fetchModels(
-
     ProviderConfig config,
-
   ) async {
-
     final response = await _dio.get(
-
-      ApiConstants.modelsEndpoint,
-
-      options: Options(
-
-        headers: {
-
-          'Authorization': 'Bearer ${config.apiKey!}',
-
-        },
-
-      ),
-
+      '${config.baseUrl ?? defaultBaseUrl}/api/tags',
     );
 
+    final List<dynamic> data =
+        response.data['models'];
 
-
-    final List<dynamic> data = response.data['data'];
-
-
-
-    return data
-
-        .map(
-
-          (model) => AIModel.fromJson(model),
-
-        )
-
-        .toList();
-
+    return data.map((model) {
+      return AIModel(
+        id: model['name'],
+        name: model['name'],
+        isFree: true,
+      );
+    }).toList();
   }
 
-
-
   @override
-
   Future<ChatMessage> sendMessage({
-
     required ProviderConfig config,
-
     required String model,
-
     required List<ChatMessage> messages,
-
   }) async {
-
     final response = await _dio.post(
-
-      ApiConstants.chatEndpoint,
-
-      options: Options(
-
-        headers: {
-
-          'Authorization': 'Bearer ${config.apiKey!}',
-
-        },
-
-      ),
-
+      '${config.baseUrl ?? defaultBaseUrl}/api/chat',
       data: {
-
         'model': model,
-
+        'stream': false,
         'messages': messages
-
             .map(
-
               (message) => {
-
                 'role': message.role.name,
-
                 'content': message.content,
-
               },
-
             )
-
             .toList(),
-
       },
-
     );
-
-
 
     final assistant =
-
-        response.data['choices'][0]['message'];
-
-
+        response.data['message'];
 
     return ChatMessage(
-
       id: DateTime.now()
-
           .microsecondsSinceEpoch
-
           .toString(),
-
       role: MessageRole.assistant,
-
       content: assistant['content'],
-
       createdAt: DateTime.now(),
-
     );
-
   }
-
 }

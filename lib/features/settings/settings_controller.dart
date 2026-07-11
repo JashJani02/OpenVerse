@@ -2,17 +2,26 @@ import 'package:flutter/material.dart';
 
 import 'package:openverse_v0/core/storage/secure_storage.dart';
 import 'package:openverse_v0/models/ai_model.dart';
-import 'package:openverse_v0/services/ai/openrouter_provider.dart';
+import '../../models/provider_config.dart';
+import '../../models/provider_type.dart';
+import '../../services/ai/provider_factory.dart';
 
 class SettingsController extends ChangeNotifier {
-  final TextEditingController apiKeyController = TextEditingController();
+  final TextEditingController apiKeyController =
+      TextEditingController();
 
-  final OpenRouterProvider _provider = OpenRouterProvider();
+  final TextEditingController ollamaUrlController =
+      TextEditingController();
+
+  ProviderType providerType =
+      ProviderType.openRouter;
 
   bool _isLoading = false;
+
   bool get isLoading => _isLoading;
 
   List<AIModel> _models = [];
+
   List<AIModel> get models => _models;
 
   bool showFreeOnly = true;
@@ -24,88 +33,140 @@ class SettingsController extends ChangeNotifier {
       return _models;
     }
 
-    return _models.where((model) => model.isFree).toList();
+    return _models
+        .where((m) => m.isFree)
+        .toList();
   }
 
-  Future<void> loadApiKey() async {
-    final key = await SecureStorageService.getApiKey();
+  Future<void> initialize() async {
+    providerType =
+        await SecureStorageService.getProvider();
 
-    apiKeyController.text = key ?? '';
+    apiKeyController.text =
+        await SecureStorageService.getApiKey() ??
+            '';
 
-    notifyListeners();
+    ollamaUrlController.text =
+        await SecureStorageService
+                .getOllamaUrl() ??
+            'http://localhost:11434';
+
+    await loadModels();
   }
 
   Future<void> loadModels() async {
-    final apiKey = apiKeyController.text.trim();
+    final config = ProviderConfig(
+      providerType: providerType,
+      apiKey: apiKeyController.text.trim(),
+      baseUrl:
+          ollamaUrlController.text.trim().isEmpty
+              ? null
+              : ollamaUrlController.text.trim(),
+    );
 
-    if (apiKey.isEmpty) return;
+    final provider =
+        ProviderFactory.create(config);
 
-    _models = await _provider.fetchModels(apiKey: apiKey);
+    _models =
+        await provider.fetchModels(config);
 
-    final savedModelId =
-    await SecureStorageService.getSelectedModel();
+    final savedModel =
+        await SecureStorageService
+            .getSelectedModel(providerType);
 
-    if (savedModelId != null) {
+    if (savedModel != null) {
       for (final model in _models) {
-        if (model.id == savedModelId) {
+        if (model.id == savedModel) {
           selectedModel = model;
           break;
         }
       }
     }
 
-    if (_models.isNotEmpty) {
-      selectedModel ??=
-          visibleModels.isNotEmpty ? visibleModels.first : _models.first;
+    if (selectedModel == null &&
+        _models.isNotEmpty) {
+      selectedModel =
+          visibleModels.isNotEmpty
+              ? visibleModels.first
+              : _models.first;
     }
 
     notifyListeners();
   }
 
-  Future<void> saveApiKey() async {
+  Future<void> saveSettings() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final apiKey = apiKeyController.text.trim();
+      await SecureStorageService.saveProvider(
+        providerType,
+      );
 
-      await SecureStorageService.saveApiKey(apiKey);
+      if (providerType ==
+          ProviderType.openRouter) {
+        await SecureStorageService.saveApiKey(
+          apiKeyController.text.trim(),
+        );
+      } else {
+        await SecureStorageService
+            .saveOllamaUrl(
+          ollamaUrlController.text.trim(),
+        );
+      }
 
       await loadModels();
-    } catch (e, stackTrace) {
-      debugPrint("ERROR: $e");
-      debugPrintStack(stackTrace: stackTrace);
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
+  Future<void> setProvider(
+    ProviderType type,
+  ) async {
+    providerType = type;
+
+    notifyListeners();
+
+    await saveSettings();
+  }
+
   void toggleFreeModels(bool value) {
     showFreeOnly = value;
 
     if (selectedModel != null &&
-        !visibleModels.any((m) => m.id == selectedModel!.id)) {
+        !visibleModels.any(
+          (m) => m.id == selectedModel!.id,
+        )) {
       selectedModel =
-          visibleModels.isNotEmpty ? visibleModels.first : null;
+          visibleModels.isNotEmpty
+              ? visibleModels.first
+              : null;
     }
 
     notifyListeners();
   }
 
- Future<void> selectModel(AIModel? model) async {
-  if (model == null) return;
+  Future<void> selectModel(
+      AIModel? model) async {
+    if (model == null) return;
 
-  selectedModel = model;
+    selectedModel = model;
 
-  await SecureStorageService.saveSelectedModel(model.id);
+    await SecureStorageService
+        .saveSelectedModel(
+      provider: providerType,
+      model: model.id,
+    );
 
-  notifyListeners();
-}
+    notifyListeners();
+  }
 
   @override
   void dispose() {
     apiKeyController.dispose();
+    ollamaUrlController.dispose();
     super.dispose();
   }
 }
